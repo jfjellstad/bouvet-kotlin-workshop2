@@ -3,10 +3,7 @@ package no.bouvet.challenge02
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import no.bouvet.challenge02.NewsFeedDao
@@ -27,7 +24,7 @@ class Coroutines02FlowsExerciseTest {
     @Test
     fun `Exercise A should create a flow that produces two strings 'hello' and 'flow'`():Unit = runBlocking {
         //TODO implement a simple flow that emits two String's: 'hello' and 'flow'
-        val flow: Flow<String> = TODO("implement")
+        val flow: Flow<String> = flowOf("hello", "flow")
 
         flow.toList() shouldBe listOf("hello", "flow")
     }
@@ -47,8 +44,14 @@ class Coroutines02FlowsExerciseTest {
     fun `Exercise B should create flow generating fibonacci sequence with a delay of 50 ms`():Unit = runBlocking {
         //TODO implement an infinite flow that emits all values of the fibonacci sequence. Between every emission the flow needs to delay for 50ms.
         // For more information about fibonacci see: https://www.mathsisfun.com/numbers/fibonacci-sequence.html
-
-        val flow: Flow<BigInteger> = TODO("implement")
+        val flow: Flow<BigInteger> = generateSequence(BigInteger.ZERO to BigInteger.ONE) { (first, second) ->
+            second to (first + second)
+        }
+            .asFlow()
+            .map {
+                delay(50)
+                it.first
+            }
 
         val millis = measureTimeMillis {
             flow.take(9).toList() shouldBe listOf(0, 1, 1, 2, 3, 5, 8, 13, 21).map { BigInteger.valueOf(it.toLong()) }

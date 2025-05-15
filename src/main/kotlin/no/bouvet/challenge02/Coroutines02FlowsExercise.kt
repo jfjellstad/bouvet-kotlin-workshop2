@@ -1,5 +1,6 @@
 package no.bouvet.challenge02
 
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 
 data class NewsItem(val id: Long, val headline: String) {
@@ -35,7 +36,13 @@ class NewsFeedService(val dao: NewsFeedDao) {
     fun pollingNewsFeedFlow(): Flow<NewsItem> = flow {
         var latestId = -1L
         tailrec suspend fun fetch() {
-            TODO("implement")
+            val result = dao.findByIdGreaterThan(latestId)
+            delay(200)
+            if (result.isNotEmpty()) {
+                latestId = result.maxOf { it.id }
+                result.forEach { emit(it) }
+            }
+            fetch()
         }
         fetch()
 
@@ -49,5 +56,18 @@ class NewsFeedService(val dao: NewsFeedDao) {
      * and then waits for the [SharedFlow] to emit a notification before fetching new items.
      * Hint 1: call [SharedFlow.collect], so when a notification is received a subsequent fetch can be initiated.
      */
-    fun sharedFlowTriggeredNewsFeedFlow(sharedFlow: Flow<String>): Flow<NewsItem>   =  TODO("implement")
+    fun sharedFlowTriggeredNewsFeedFlow(sharedFlow: Flow<String>): Flow<NewsItem> = flow {
+        var latestId = -1L
+        suspend fun fetch() {
+            val result = dao.findByIdGreaterThan(latestId)
+            if (result.isNotEmpty()) {
+                latestId = result.maxOf { it.id }
+                result.forEach { emit(it) }
+            }
+            sharedFlow.collect {
+                fetch()
+            }
+        }
+        fetch()
+    }
 }
