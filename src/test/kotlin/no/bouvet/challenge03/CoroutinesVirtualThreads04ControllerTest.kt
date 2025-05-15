@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
+import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.expectBody
@@ -27,6 +28,11 @@ import kotlin.system.measureTimeMillis
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ExtendWith(SpringExtension::class)
 @AutoConfigureWebTestClient(timeout = "36000")
+@TestPropertySource(
+    properties = [
+        "spring.threads.virtual.enabled=true"
+    ]
+)
 class CoroutinesVirtualThreads04ControllerTest @Autowired constructor(
     val stockRepository: StockRepository,
     blockingExchangeServiceNasdaq: BlockingJExchangeServiceNasdaq,
