@@ -1,7 +1,11 @@
 package no.bouvet.challenge01
 
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import no.bouvet.challenge01.CurrencyService
 import no.bouvet.challenge01.CurrencyService.Companion.USD
@@ -21,7 +25,7 @@ class Coroutines01BasicsExerciseTest {
     val banks = listOf(bankA, bankB, bankC)
 
     @BeforeEach
-    fun setup(){
+    fun setup() {
         logs.clear()
     }
 
@@ -51,9 +55,11 @@ class Coroutines01BasicsExerciseTest {
     @Test
     fun `Exercise B should call CurrencyService getCurrency(USD) method of bankA with correct coroutine builder `() {
         //TODO: call the newly implemented method CurrencyService.getCurrency(USD) for bankA .
-        TODO("Uncomment assertion below when doing this exercise")
-        //bankA.getCurrency(USD) shouldBe 125.12
-        //logs.firstOrNull { it.message.contains("Get currency $USD at rate 125.12") }.shouldNotBeNull()
+        // TODO("Uncomment assertion below when doing this exercise")
+        runBlocking {
+            bankA.getCurrency(USD) shouldBe 125.12
+        }
+        logs.firstOrNull { it.message.contains("Get currency $USD at rate 125.12") }.shouldNotBeNull()
     }
 
 
@@ -83,7 +89,9 @@ class Coroutines01BasicsExerciseTest {
         val coroutinesMs = measureTimeMillis {
             runBlocking {
                 //TODO: call CurrencyService.getCurrency(USD) of bankA and bankB concurrently using the coroutine builder launch
-
+                listOf(bankA, bankB).forEach { bank ->
+                        launch { bank.getCurrency(USD) }
+                    }
             } //<- at the end of runBlocking all Coroutines will have been joined 'automagically' due to structured concurrency,
         }
         //important: the total time should not be greater (+/-) than the latency of the slowest service (here bankB)
@@ -103,7 +111,9 @@ class Coroutines01BasicsExerciseTest {
         val coroutinesMs = measureTimeMillis {
             //TODO: calculate the average conversion rate of all backs executing the call to getCurrency(USD) in parallel using async and await
             runBlocking {
-                val averageRateOfAllBanks: Double = TODO("implement")
+                val averageRateOfAllBanks: Double = banks.map { bank ->
+                    async { bank.getCurrency(USD) }
+                }.awaitAll().average()
                 averageRateOfAllBanks shouldBe listOf(125.12, 126.2, 124.12).average()
             }
         }

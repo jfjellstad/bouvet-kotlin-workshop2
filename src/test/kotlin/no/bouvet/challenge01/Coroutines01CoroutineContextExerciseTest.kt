@@ -6,10 +6,8 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldStartWith
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.newSingleThreadContext
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
+import kotlinx.coroutines.slf4j.MDCContext
 import no.bouvet.challenge01.CurrencyService
 import no.bouvet.uitls.registerAppenderForClass
 import org.junit.jupiter.api.BeforeEach
@@ -64,8 +62,12 @@ class Coroutines01CoroutineContextExerciseTest {
         //even though we only have one thread it is used much more efficient because suspend functions don't block the Thread that executes them
         val coroutinesMs = measureTimeMillis {
             //TODO: call CurrencyService.getCurrency(USD) of all banks using the singleThreadPool as input of the coroutine builder method runBlocking
-            runBlocking {
+            runBlocking(singleThreadPool) {
                 //TODO: call the methods here
+                banks.forEach { bank ->
+                    this.launch { bank.getCurrency(CurrencyService.USD) }
+                }
+
                 Thread.currentThread().name shouldStartWith "single-thread-pool"
             }
         }
@@ -100,11 +102,13 @@ class Coroutines01CoroutineContextExerciseTest {
             //TODO: provide the correct CoroutineContexts to ensure that:
             //- the parallel calls to getCurrencyBlocking(USD) is not handled with the single Thread from runBlocking{...{
             //- the MDC context is propagated to the coroutines doing the getCurrencyBlocking(USD) call
-            runBlocking(context = TODO("provide context")) {
+            runBlocking(context = MDCContext() + Dispatchers.Default) {
 
                 //TODO: call all bank's getCurrencyBlocking(USD) method in parallel and retrieve the lowest rate
                 // Important! DO NOT not use the suspend getCurrency(...) method
-                val minRateOfAllBanks = TODO("implement")
+                val minRateOfAllBanks = banks.map {
+                    async { it.getCurrencyBlocking(CurrencyService.USD) }
+                }.awaitAll().min()
                 val expectedRates = listOf(125.12, 126.2, 124.12)
 
                 //assert min rate

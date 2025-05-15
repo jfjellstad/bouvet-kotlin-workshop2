@@ -1,5 +1,6 @@
 package no.bouvet.challenge01
 
+import kotlinx.coroutines.delay
 import no.bouvet.utils.logger
 
 class CurrencyService(private val latency:Long, private val exchangeRates:Map<String, Double>) {
@@ -17,12 +18,15 @@ class CurrencyService(private val latency:Long, private val exchangeRates:Map<St
      * IMPORTANT: Don't forget to log the call with EXACTLY the following message: 'Get currency $currency at rate $rate'
      * (otherwise your tests won't succeed)
      */
-    fun getCurrency(currency: String): Double {
-        return TODO("implement")
+    suspend fun getCurrency(currency: String): Double {
+        delay(latency)
+        return exchangeRates.getOrDefault(currency, 0.0).also{ rate ->
+            logger.info("Get currency $currency at rate $rate")
+        }
     }
 
 
     companion object {
-        val USD = "USD"
+        const val USD = "USD"
     }
 }
