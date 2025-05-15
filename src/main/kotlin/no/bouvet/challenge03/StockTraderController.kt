@@ -1,11 +1,15 @@
 package no.bouvet.challenge03
 
-import kotlinx.coroutines.flow.Flow
-import org.springframework.web.bind.annotation.*
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.codec.ServerSentEvent
+import org.springframework.web.bind.annotation.*
+import org.springframework.web.server.ResponseStatusException
 
 @RestController
 class StockTraderController(
@@ -15,7 +19,7 @@ class StockTraderController(
     exchangeServiceSix: ExchangeServiceSix
 ) {
 
-    val exchanges = listOf(exchangeServiceEuronext,exchangeServiceNasdaq, exchangeServiceSix)
+    val exchanges = listOf(exchangeServiceEuronext, exchangeServiceNasdaq, exchangeServiceSix)
 
     /**
      * Challenge 3 - Part 2 - Exercise A
@@ -27,7 +31,8 @@ class StockTraderController(
      */
     @GetMapping("/stocks/{stock-id}")
     @ResponseBody
-    suspend fun getStock(@PathVariable("stock-id") id: Long = 0): Stock? = TODO("implement")
+    suspend fun getStock(@PathVariable("stock-id") id: Long = 0): Stock? =
+        stockRepository.findById(id)
 
 
     /**
@@ -40,7 +45,8 @@ class StockTraderController(
      */
     @GetMapping("/stock")
     @ResponseBody
-    suspend fun stockBySymbol(@RequestParam("symbol") symbol: String): Stock? = TODO("implement")
+    suspend fun stockBySymbol(@RequestParam("symbol") symbol: String): Stock? =
+        stockRepository.findBySymbol(symbol)
 
 
     /**
@@ -56,7 +62,13 @@ class StockTraderController(
     @PostMapping("/stocks")
     @ResponseBody
     suspend fun upsertStock(@RequestBody stock: Stock): Stock {
-        return TODO("implement")
+        val updated = stockRepository.findBySymbol(stock.symbol)
+            ?.copy(price = stock.price)
+            ?: stock
+        return stockRepository.save(updated).also {
+            // challenge 3 - part 3
+            sharedFlow.emit(StockChangedNotification(it))
+        }
     }
 
     /**
@@ -72,7 +84,20 @@ class StockTraderController(
      */
     @GetMapping("/stocks/quote")
     @ResponseBody
-    suspend fun bestQuote(@RequestParam("symbol") symbol: String): StockQuoteDto? = TODO("implement")
+    suspend fun bestQuote(
+        @RequestParam("symbol") symbol: String,
+        @RequestParam(value = "delay", required = false, defaultValue = "0") delay: Long
+    ): StockQuoteDto? = coroutineScope {
+        stockRepository.findBySymbol(symbol)
+            ?.let { stock ->
+                exchanges.map { exchange ->
+                    async {
+                        exchange.getStockQuote(stock.symbol, delay)
+                    }
+                }.awaitAll().minByOrNull { it.currentPrice }
+            }
+            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Unable to find stock with symbol=$symbol")
+    }
 
     //========================================================================================================
 
@@ -86,7 +111,7 @@ class StockTraderController(
      */
     @GetMapping("/stocks")
     @ResponseBody
-    fun getStocks(): Flow<Stock> = TODO("implement")
+    fun getStocks(): Flow<Stock> = stockRepository.findAll()
 
 
     /**
@@ -107,19 +132,25 @@ class StockTraderController(
      */
     @GetMapping("/stocks/sse-polling", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
     @ResponseBody
-    suspend fun pollingStocksFlow(@RequestParam("offset") offsetId: Long = 0): Flow<ServerSentEvent<Stock>> {
+    suspend fun pollingStocksFlow(
+        @RequestParam("offset") offsetId: Long = 0
+    ): Flow<ServerSentEvent<Stock>> = flow<ServerSentEvent<Stock>> {
         var latestId = offsetId
         tailrec suspend fun fetch() {
-            TODO("implement")
+            stockRepository.findById_GreaterThan(latestId)
+                .collect { stock ->
+                    latestId = stock.id!!
+                    emit(ServerSentEvent.builder(stock).id(stock.id.toString()).build())
+                }
+            delay(200)
+            fetch()
         }
         fetch()
-        return  TODO("implement return flow")
-
     }
 
 
-
     data class StockChangedNotification(val stock: Stock)
+
     private val sharedFlow = MutableSharedFlow<StockChangedNotification>()
 
     /**
@@ -133,6 +164,18 @@ class StockTraderController(
      */
     @GetMapping("/stocks/sse-shared-flow-triggered", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
     @ResponseBody
-    fun sharedFlowTriggeredNewsFeedFlow(@RequestParam("offset") offsetId: Long = 0): Flow<ServerSentEvent<Stock>> = TODO("implement")
-
+    suspend fun sharedFlowTriggeredNewsFeedFlow(@RequestParam("offset") offsetId: Long = 0): Flow<ServerSentEvent<Stock>> = flow {
+        var latestId = -1L
+        suspend fun fetch() {
+            stockRepository.findById_GreaterThan(latestId)
+                .collect { stock ->
+                    latestId = stock.id!!
+                    emit(ServerSentEvent.builder(stock).id(stock.id.toString()).build())
+                }
+            sharedFlow.collect {
+                fetch()
+            }
+        }
+        fetch()
+    }
 }

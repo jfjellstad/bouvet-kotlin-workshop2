@@ -1,5 +1,6 @@
 package no.bouvet.challenge03
 
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import no.bouvet.uitls.prepareTestData
 import no.bouvet.uitls.reAssignVal
@@ -30,10 +31,8 @@ class Coroutines01ServiceRepositoryTest @Autowired constructor(val stockReposito
      */
     @Test
     fun `Exercise A should get stock by symbol from Coroutine enabled StocksRepository`(): Unit = runBlocking {
-        TODO("uncomment")
-//        val foundStock = stocksRepository.findBySymbol(GOOG)
-//        foundStock?.symbol shouldBe GOOG
-
+        val foundStock = stockRepository.findBySymbol(GOOG)
+        foundStock?.symbol shouldBe GOOG
     }
 
     /**
@@ -42,9 +41,8 @@ class Coroutines01ServiceRepositoryTest @Autowired constructor(val stockReposito
      */
     @Test
     fun `Exercise B should get stock quote from ExchangeService`(): Unit = runBlocking {
-        TODO("uncomment")
-//        val stockQuote = nasdaqService.getStockQuote(GOOG)
-//        stockQuote.symbol shouldBe GOOG
+        val stockQuote = nasdaqService.getStockQuote(GOOG)
+        stockQuote.symbol shouldBe GOOG
     }
 
 

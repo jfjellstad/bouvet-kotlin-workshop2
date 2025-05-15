@@ -3,6 +3,7 @@ package no.bouvet.challenge03
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.awaitBody
 
 abstract class ExchangeService(val baseUrl: String, val exchangeId:String) {
     private val client by lazy { WebClient.create(baseUrl) }
@@ -18,7 +19,12 @@ abstract class ExchangeService(val baseUrl: String, val exchangeId:String) {
      * Make the corresponding test in @see Coroutines01ServiceRepositoryTest pass.
      */
     //TODO: implement the getStockQuote method
-
+    suspend fun getStockQuote(stockSymbol: String, delay: Long? = null): StockQuoteDto {
+        return client.get()
+            .uri("/quotes?symbol=" + stockSymbol + "&exchange=" + exchangeId + (if (delay != null) "&delay=$delay" else ""))
+            .retrieve()
+            .awaitBody<StockQuoteDto>()
+    }
 }
 
 @Component

@@ -6,9 +6,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import no.bouvet.challenge02.NewsFeedDao
-import no.bouvet.challenge02.NewsFeedService
-import no.bouvet.challenge02.NewsItem
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import java.math.BigInteger

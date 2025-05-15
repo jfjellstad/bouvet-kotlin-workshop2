@@ -22,6 +22,7 @@ interface StockRepository : CoroutineCrudRepository<Stock, Long> {
      * Make the corresponding test in @see [no.bouvet.challenge03.Coroutines01ServiceRepositoryTest] pass.
      */
     //TODO: implement the findBySymbol method
+    suspend fun findBySymbol(symbol: String): Stock?
 
     //=================================================================================================================
 
